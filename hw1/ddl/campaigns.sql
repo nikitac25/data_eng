@@ -1,4 +1,6 @@
-
+/*Table isolates campaign metadata, including targeting and budget information
+Column TargetingCriteria was separated to smaller logical columns
+*/
 
 CREATE TABLE campaigns (
     campaign_id INT PRIMARY KEY,
