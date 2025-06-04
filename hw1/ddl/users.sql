@@ -1,4 +1,4 @@
--- Table stores demographic and interest data. user_id is the primary key for connecting user activity across impressions and clicks.
+/*Table stores demographic and interest data. user_id is the primary key for connecting user activity across impressions and clicks.*/
 
 CREATE TABLE users (
     user_id INT PRIMARY KEY,
