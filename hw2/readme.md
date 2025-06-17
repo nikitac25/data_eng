@@ -9,7 +9,10 @@
     MYSQL_HOST=host.docker.internal
     ```
 
-2. **Run the following commands** to set up MySQL, load the data and upload outputs:
+2. **(Optional)**: Replace the CSV files in the `datasources` folder with full datasets.  
+   The repository includes only small sample files for demonstration.
+
+3. **Run the following commands** to set up MySQL and load the data:
 
     ```bash
     bash start_mysql.sh
