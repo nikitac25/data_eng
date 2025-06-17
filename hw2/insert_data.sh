@@ -1,5 +1,6 @@
 docker run -it --rm \
-  -v "$(pwd)/python:/app" \
+  --env-file .env \
+  -v "$(pwd)/scripts:/app" \
   -v "$(pwd)/datasources:/data" \
   -w /app \
   python:3.11 \
