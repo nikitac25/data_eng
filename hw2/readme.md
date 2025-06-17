@@ -3,8 +3,8 @@
 1. **Create a `.env` file** in the `hw2` directory with the following variables:
 
     ```env
-    MYSQL_USER=yourusername
-    MYSQL_PASSWORD=yourpassword
+    MYSQL_USER=replace_with_your_username
+    MYSQL_PASSWORD=replace_with_your_password
     MYSQL_DATABASE=assessment_db
     MYSQL_HOST=host.docker.internal
     ```
