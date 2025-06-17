@@ -1,4 +1,5 @@
 docker run -it --rm \
+  --env-file .env \
   -v "$(pwd)/scripts:/app" \
   -v "$(pwd)/datasources:/data" \
   -w /app \
