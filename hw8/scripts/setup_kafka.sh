@@ -21,15 +21,13 @@ if [[ ! -f "$COMPOSE_PATH" ]]; then
   exit 1
 fi
 
-echo "Using compose file: $COMPOSE_PATH"
-$DOCKER_COMPOSE -f "$COMPOSE_PATH" up -d
-
 echo "Waiting for broker to initialize..."
 sleep 10
 
 echo "Creating topic 'tweets' (idempotent)..."
-docker exec broker bash -lc 'kafka-topics.sh --bootstrap-server broker:9092 --create --if-not-exists --topic tweets --partitions 1 --replication-factor 1 || true'
+docker exec broker bash -lc '/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server broker:9092 --create --if-not-exists --topic tweets --partitions 1 --replication-factor 1 || true'
 
 echo "Topics:"
-docker exec broker bash -lc 'kafka-topics.sh --bootstrap-server broker:9092 --list'
+docker exec broker bash -lc '/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server broker:9092 --list'
+
 
