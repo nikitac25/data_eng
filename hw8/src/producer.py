@@ -9,8 +9,8 @@ from typing import Optional
 from kafka import KafkaProducer
 from dotenv import load_dotenv
 
-from io_utils import read_csv_as_dicts, pick_timestamp_field, serialize_record
-from rate import PaceController
+from src.io_utils import read_csv_as_dicts, pick_timestamp_field, serialize_record
+from src.rate import PaceController
 
 logging.basicConfig(
     level=logging.INFO,
