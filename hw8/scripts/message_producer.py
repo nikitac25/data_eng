@@ -39,14 +39,11 @@ def stream():
         for row in reader:
             start = time.time()
 
-            # skip empty texts (dataset-specific, safe no-op otherwise)
             if not (row.get("text") or "").strip():
                 continue
-
-            # overwrite timestamp
+                
             row["created_at"] = now_iso()
-
-            # build key (author_id if present)
+            
             key = row.get("author_id")
             try:
                 # send & wait a bit so we know it actually went out
@@ -56,7 +53,6 @@ def stream():
             except Exception as e:
                 print(f"send error: {e}")
 
-            # simple pacing
             elapsed = time.time() - start
             sleep_for = delay - elapsed
             if sleep_for > 0:
