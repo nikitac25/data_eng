@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   zookeeper:
     image: bitnami/zookeeper:3.9
@@ -7,9 +6,10 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
     ports:
       - "2181:2181"
-  broker:
+
+  kafka:
     image: bitnami/kafka:3.7
-    container_name: broker
+    container_name: kafka
     depends_on:
       - zookeeper
     ports:
@@ -18,19 +18,20 @@ services:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://broker:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       - ALLOW_PLAINTEXT_LISTENER=yes
-    healthcheck:
-      test: ["CMD", "bash", "-c", "kafka-topics.sh --bootstrap-server broker:9092 --list"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-  # Optional: a simple consumer you can exec into
-  ktools:
-    image: bitnami/kafka:3.7
-    container_name: ktools
-    depends_on:
-      - broker
-    entrypoint: ["bash", "-lc", "sleep infinity"]
+
+  message-producer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: message-producer
     environment:
-      - ALLOW_PLAINTEXT_LISTENER=yes
+      KAFKA_BROKER: ${KAFKA_BROKER}
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+      INPUT_CSV: ${INPUT_CSV}
+      RATE_PER_SEC: ${RATE_PER_SEC}
+    volumes:
+      - ./datasources:/app/datasources:ro
+    depends_on:
+      - kafka
