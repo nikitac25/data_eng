@@ -4,7 +4,6 @@ set -e
 echo "starting zookeeper & kafka"
 docker-compose up -d zookeeper kafka >/dev/null
 
-# small wait so broker is ready
 sleep 8
 
 BIN="/opt/bitnami/kafka/bin"
