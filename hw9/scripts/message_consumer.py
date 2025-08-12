@@ -6,8 +6,8 @@ from kafka import KafkaConsumer
 
 BOOTSTRAP = os.getenv("KAFKA_BROKER")
 TOPIC = os.getenv("KAFKA_TOPIC")
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/app/archive")
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
+OUTPUT_DIR = os.getenv("OUTPUT_DIR")
+BATCH_SIZE = int(os.getenv("BATCH_SIZE"))
 
 COLUMNS = ["author_id", "created_at", "text"]
 
