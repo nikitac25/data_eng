@@ -13,6 +13,4 @@ ENV PYTHONPATH "/"
 
 COPY scripts/message_producer.py .
 
-RUN mkdir -p /app/data
-
 CMD ["python", "message_producer.py"]
