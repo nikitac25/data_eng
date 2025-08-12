@@ -24,7 +24,7 @@ services:
   message-producer:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Producer.Dockerfile
     container_name: message-producer
     environment:
       KAFKA_BROKER: ${KAFKA_BROKER}
@@ -33,5 +33,21 @@ services:
       RATE_PER_SEC: ${RATE_PER_SEC}
     volumes:
       - ./datasources:/app/datasources:ro
+    depends_on:
+      - kafka
+
+  message-consumer:
+    build:
+      context: .
+      dockerfile: Consumer.Dockerfile
+    container_name: message-consumer
+    environment:
+      KAFKA_BROKER: ${KAFKA_BROKER}
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+      BATCH_SIZE: ${BATCH_SIZE}
+    volumes:
+      - type: bind
+        source: ./output_archive
+        target: /app/archive
     depends_on:
       - kafka
