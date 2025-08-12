@@ -45,6 +45,7 @@ services:
       KAFKA_BROKER: ${KAFKA_BROKER}
       KAFKA_TOPIC: ${KAFKA_TOPIC}
       BATCH_SIZE: ${BATCH_SIZE}
+      OUTPUT_DIR: ${OUTPUT_DIR}
     volumes:
       - type: bind
         source: ./output_archive
