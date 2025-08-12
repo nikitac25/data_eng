@@ -34,7 +34,7 @@
     ```
 
 
-6. **Verify the topic contents using the Kafka console client** *(requirement #3)*:
+6. **Verify the topic contents using the Kafka console client**:
 
     ```bash
     docker-compose exec kafka bash -lc '/opt/bitnami/kafka/bin/kafka-console-consumer.sh \
