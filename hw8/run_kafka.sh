@@ -1,4 +1,7 @@
-#!/usr/bin/env bash
+if ! command -v dos2unix >/dev/null 2>&1; then
+  sudo apt-get update && sudo apt-get install -y dos2unix
+fi
+
 set -e
 
 echo "starting zookeeper & kafka"
