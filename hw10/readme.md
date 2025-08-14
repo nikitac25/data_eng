@@ -1,6 +1,6 @@
 ## Setup Instructions
 
-1. **Create a `.env` file** in the `hw10` directory using the example below (adjust values if needed). Save it as `hw10/.env`:
+1. **Create a `.env` file** in the `hw10` directory using the example provided below. Save it as `hw10/.env`:
 
     ```env
     # Zookeeper
