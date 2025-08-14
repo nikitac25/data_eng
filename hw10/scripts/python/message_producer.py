@@ -3,7 +3,7 @@ from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
 import constants
 
-URL = constants.WIKIMEDIA_URL
+URL = constants.WIKIPEDIA_ENDPOINT
 TOPIC = constants.KAFKA_TOPIC
 BOOTSTRAP = constants.BOOTSTRAP_SERVERS
 ALLOWED = {"en.wikipedia.org", "www.wikidata.org", "commons.wikimedia.org"}
