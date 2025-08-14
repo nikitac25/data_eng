@@ -6,8 +6,6 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-ENV PYTHONPATH "/"
-
 COPY scripts/message_producer.py .
 
 CMD ["python", "message_producer.py"]
