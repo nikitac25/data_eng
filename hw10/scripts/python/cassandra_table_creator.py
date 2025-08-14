@@ -16,7 +16,7 @@ def main():
         CREATE TABLE IF NOT EXISTS {constants.CASSANDRA_TABLE} (
             user_id INT,
             domain TEXT,
-            created_at DATE,
+            created_at TIMESTAMP,
             page_title TEXT,
             PRIMARY KEY (user_id, page_title)
         );
