@@ -144,3 +144,6 @@ networks:
   wiki-net:
     name: wiki-net
     driver: bridge
+
+volumes:
+  cassandra_logs:
