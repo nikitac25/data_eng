@@ -7,10 +7,24 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     volumes:
-      - ./datasources:/datasources
       - ./mongodb_archive:/data/db
     ports:
       - ${MONGO_PORT}
+
+  python:
+    image: python:3.11-slim
+    working_dir: ./:scripts
+    volumes:
+        - ./scripts/python:/scripts
+        - ./scripts/mongosh:/scripts
+    environment:
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_DB: ${MONGO_DB}
+    depends_on:
+      - mongodb
+    command: ["python", "mongodb_creator.py"]
+
 
 volumes:
   mongodb_archive:
