@@ -18,10 +18,11 @@ services:
       retries: 20
 
   python:
-    image: python:3.11-slim
-    working_dir: /scripts
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
-        - ./scripts/python:/scripts
+        - ./scripts/datasources:/datasources
     environment:
       MONGO_USER: ${MONGO_USER}
       MONGO_PASSWORD: ${MONGO_PASSWORD}
