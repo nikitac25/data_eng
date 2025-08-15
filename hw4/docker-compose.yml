@@ -1,0 +1,16 @@
+services:
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: ${CASSANDRA_CLUSTER_NAME}
+      CASSANDRA_DATACENTER: ${CASSANDRA_DATACENTER}
+      CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE}
+    ports:
+      - "9042:9042"
+    volumes:
+      - ./cassandra_logs:/var/lib/cassandra
+
+volumes:
+  cassandra_logs:
