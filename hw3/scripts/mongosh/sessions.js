@@ -2,8 +2,6 @@ const DB_NAME = process.env.MONGO_INITDB_DATABASE;
 
 db = db.getSiblingDB(DB_NAME);
 
-use ad_platform;
-
 db.createCollection("sessions", {
   validator: {
     $jsonSchema: {
