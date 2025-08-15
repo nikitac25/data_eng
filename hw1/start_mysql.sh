@@ -1,18 +1,28 @@
+if ! command -v dos2unix >/dev/null 2>&1; then
+  sudo apt-get update && sudo apt-get install -y dos2unix
+fi
+
+dos2unix .env 2>/dev/null
+
+set -a
+source .env
+set +a
+
 mkdir -p hw_1_db
 cd hw_1_db || exit
 
 docker run -d \
   --name mysql-db \
-  -e MYSQL_ROOT_PASSWORD=rootpassword \
-  -e MYSQL_DATABASE=assessment_db \
+  -e MYSQL_ROOT_PASSWORD="$MYSQL_PASSWORD" \
+  -e MYSQL_DATABASE="$MYSQL_DATABASE" \
   -p 3306:3306 \
   mysql:8.0
 
 sleep 20
 
 
-docker exec -i mysql-db mysql -uroot -prootpassword <<EOF
-USE assessment_db;
+docker exec -i mysql-db mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" <<EOF
+USE $MYSQL_DATABASE;
 
 CREATE TABLE users (
     user_id INT PRIMARY KEY,
