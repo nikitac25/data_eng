@@ -1,0 +1,2 @@
+services:
+  image: mysql:8.0
