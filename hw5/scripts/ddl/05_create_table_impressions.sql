@@ -1,5 +1,5 @@
-CREATE TABLE impressions (
-    id INT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS impressions (
+    id VARCHAR(100) PRIMARY KEY,
     campaign_id INT NOT NULL,
     user_id INT NOT NULL,
     device VARCHAR(50),

@@ -1,4 +1,4 @@
-CREATE TABLE campaigns (
+CREATE TABLE IF NOT EXISTS campaigns (
     campaign_id INT PRIMARY KEY,
     advertiser_id INT NOT NULL,
     campaign_name VARCHAR(100),

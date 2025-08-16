@@ -1,4 +1,4 @@
-CREATE TABLE advertisers (
+CREATE TABLE IF NOT EXISTS advertisers (
     id INT PRIMARY KEY,
     name VARCHAR(100)
 );
