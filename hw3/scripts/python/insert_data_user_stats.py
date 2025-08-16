@@ -5,14 +5,12 @@ from datetime import datetime, timezone
 import pandas as pd
 from pymongo import MongoClient, UpdateOne
 
-# --- config (env with sensible defaults) ---
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/assessment_db")
 MONGO_DB  = os.getenv("MONGO_DB",  "assessment_db")
 CSV_DIR   = os.getenv("CSV_DIR",   "/datasources")
 
 AD_EVENTS = os.path.join(CSV_DIR, "ad_events.csv")
 
-# engagements must mirror validator fields (no extras)
 ENG_COLS = [
     "EventID","AdvertiserName","CampaignName",
     "CampaignStartDate","CampaignEndDate",
@@ -21,10 +19,8 @@ ENG_COLS = [
     "BidAmount","AdCost","AdRevenue","Budget","RemainingBudget",
 ]
 
-# --- load ---
 ae = pd.read_csv(AD_EVENTS)
 
-# --- type normalize ---
 for c in ["Timestamp","ClickTimestamp","CampaignStartDate","CampaignEndDate"]:
     if c in ae.columns:
         ae[c] = pd.to_datetime(ae[c], errors="coerce", utc=True)
@@ -34,15 +30,12 @@ for c in ["BidAmount","AdCost","AdRevenue","Budget","RemainingBudget"]:
 if "UserID" in ae.columns:
     ae["UserID"] = ae["UserID"].astype(str)
 
-# required for grouping
 if "UserID" not in ae.columns:
     raise SystemExit("missing required column in ad_events.csv: UserID")
 
-# stable order for earliest SignupDate etc.
 if "Timestamp" in ae.columns:
     ae = ae.sort_values(["UserID","Timestamp"])
 
-# --- helpers ---
 AGE_RE_RANGE  = re.compile(r"(\d{1,3})\s*-\s*(\d{1,3})")
 AGE_RE_SINGLE = re.compile(r"(\d{1,3})\+?")
 
@@ -63,35 +56,29 @@ def derive_age(criteria: str) -> int:
         return int(m2.group(1))
     return 0
 
-# --- transform to per-user docs ---
-users = {}  # UserID -> doc
+users = {}
 
 for _, r in ae.iterrows():
     uid = str(r.get("UserID")) if pd.notna(r.get("UserID")) else ""
     if not uid:
         continue
 
-    # engagement: keep only validator-approved fields + Clicks[] nested
     eng = {k: r[k] for k in ENG_COLS if k in r and pd.notna(r[k])}
 
-    # to native datetimes where needed
     for dtc in ["Timestamp","CampaignStartDate","CampaignEndDate"]:
         if dtc in eng:
             eng[dtc] = to_py_dt(eng[dtc])
 
-    # numeric fields already coerced above; allow None for missing numerics
     for numc in ["BidAmount","AdCost","AdRevenue","Budget","RemainingBudget"]:
         if numc in eng and pd.isna(eng[numc]):
             eng[numc] = None
 
-    # ensure string casting on identifiers/text
     for sc in ["EventID","AdvertiserName","CampaignName",
                "CampaignTargetingCriteria","CampaignTargetingInterest",
                "CampaignTargetingCountry","AdSlotSize","UserID","Device","Location"]:
         if sc in eng:
             eng[sc] = str(eng[sc])
 
-    # Clicks nested (optional)
     clicks = []
     wc = r.get("WasClicked", None)
     ct = r.get("ClickTimestamp", None)
@@ -106,7 +93,6 @@ for _, r in ae.iterrows():
     if clicks:
         eng["Clicks"] = clicks
 
-    # user init
     if uid not in users:
         crit = eng.get("CampaignTargetingCriteria","")
         age  = derive_age(crit)
@@ -120,27 +106,23 @@ for _, r in ae.iterrows():
                 "Age": int(age),
                 "Gender": "Unknown",
                 "Location": loc,
-                "Interests": intr,      # validator allows string OR array; we keep string
+                "Interests": intr,
                 "SignupDate": sgn
             },
             "engagements": []
         }
 
-    # earliest signup date
     if eng.get("Timestamp") and eng["Timestamp"] < users[uid]["demographics"]["SignupDate"]:
         users[uid]["demographics"]["SignupDate"] = eng["Timestamp"]
 
-    # keep first non-empty location if current is Unknown/empty
     if eng.get("Location") and users[uid]["demographics"]["Location"] in ("","Unknown"):
         users[uid]["demographics"]["Location"] = eng["Location"]
 
-    # keep most recently seen interest (simple heuristic)
     if eng.get("CampaignTargetingInterest"):
         users[uid]["demographics"]["Interests"] = eng["CampaignTargetingInterest"]
 
     users[uid]["engagements"].append(eng)
 
-# --- write ---
 cli = MongoClient(MONGO_URI)
 db = cli[MONGO_DB]
 coll = db["user_stats"]

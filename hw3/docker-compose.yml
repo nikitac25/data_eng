@@ -31,6 +31,6 @@ services:
     depends_on:
       mongodb:
           condition: service_healthy
-    command: ["python", "insert_data_sessions.py"]
+    command: ["sh", "-c", "python insert_data_sessions.py && python insert_data_user_stats.py"]
 
 

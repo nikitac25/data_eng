@@ -1,9 +1,8 @@
 import os
 from datetime import timedelta
 import pandas as pd
-from pymongo import MongoClient
+from pymongo import MongoClient, InsertOne
 
-# --- config (env with sensible defaults) ---
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/assessment_db")
 MONGO_DB = os.getenv("MONGO_DB", "assessment_db")
 CSV_DIR = os.getenv("CSV_DIR", "/datasources")
@@ -31,7 +30,6 @@ for c in ["BidAmount","AdCost","AdRevenue","Budget","RemainingBudget"]:
 if "UserID" in ae.columns:
     ae["UserID"] = ae["UserID"].astype(str)
 
-# required cols for sessionization
 for req in ["UserID","Device","Timestamp"]:
     if req not in ae.columns:
         raise SystemExit(f"missing required column in ad_events.csv: {req}")
@@ -61,26 +59,46 @@ for (user, device), g in ae.groupby(["UserID","Device"], dropna=False):
     for _, r in g.iterrows():
         ts = r["Timestamp"]
         if last_ts is not None and pd.notna(ts) and pd.notna(last_ts) and (ts - last_ts) > gap:
-            flush(bucket, user, device); bucket = []
-        # impression: keep only allowed cols; remove NaNs
+            flush(bucket, user, device)
+            bucket = []
+
         imp = {k: r[k] for k in IMP_COLS if k in r and pd.notna(r[k])}
-        # to native datetimes
+
         for dtc in ["Timestamp","CampaignStartDate","CampaignEndDate"]:
             if dtc in imp:
                 imp[dtc] = pd.to_datetime(imp[dtc], utc=True).to_pydatetime()
-        # clicks nested (only if present)
+
         clicks = []
         wc = r.get("WasClicked", None)
         ct = r.get("ClickTimestamp", None)
-        if pd.notna(wc) or pd.notna(ct):
+        if (wc is not None and not pd.isna(wc)) or (ct is not None and not pd.isna(ct)):
             entry = {}
-            if pd.notna(wc):
-                entry["WasClicked"] = (str(wc).strip().lower() in ("1", "true", "t", "yes", "y")) if isinstance(wc,str) else bool(wc)
-            if pd.notna(ct):
+            if wc is not None and not pd.isna(wc):
+                if isinstance(wc, str):
+                    entry["WasClicked"] = (wc.strip().lower() in ("1","true","t","yes","y"))
+                else:
+                    entry["WasClicked"] = bool(wc)
+            if ct is not None and not pd.isna(ct):
                 entry["ClickTimestamp"] = pd.to_datetime(ct, utc=True).to_pydatetime()
             clicks.append(entry)
         if clicks:
             imp["Clicks"] = clicks
 
+        if "WasClicked" in imp: del imp["WasClicked"]
+        if "ClickTimestamp" in imp: del imp["ClickTimestamp"]
+
         bucket.append(imp)
         last_ts = ts if pd.notna(ts) else last_ts
+
+    flush(bucket, user, device)
+
+cli = MongoClient(MONGO_URI)
+db = cli[MONGO_DB]
+coll = db["sessions"]
+
+if sessions:
+    ops = [InsertOne(doc) for doc in sessions]
+    res = coll.bulk_write(ops, ordered=False)
+    print(f"Inserted {len(sessions)} session documents into {MONGO_DB}.sessions")
+else:
+    print("No sessions to write.")
