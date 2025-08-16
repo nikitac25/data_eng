@@ -1,5 +1,3 @@
-In development process
-
 ## Setup Instructions
 
 1. **Create a `.env` file** in the `hw9` directory with the following variables:
@@ -27,7 +25,7 @@ In development process
 4. **Start Kafka services and create the topic**:
 
     ```bash
-    bash run_kafka.sh
+    bash run_kafka.cqlsh
     ```
 
 5. **Run the consumer** :
