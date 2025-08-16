@@ -6,4 +6,4 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY scripts/python .
+COPY scripts/python/insert_data_sessions.py .

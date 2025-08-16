@@ -12,7 +12,7 @@ services:
     ports:
       - "27017:27017"
     healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand({ ping: 1 })" ]
+      test: [ "CMD","mongosh","mongodb://${MONGO_USER}:${MONGO_PASSWORD}@localhost:27017/admin?authSource=admin","--eval","db.runCommand({ connectionStatus: 1 })"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -22,14 +22,15 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-        - ./scripts/datasources:/datasources
+        - ./datasources:/datasources:ro
     environment:
-      MONGO_USER: ${MONGO_USER}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_URI: "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:27017/${MONGO_DB}?authSource=admin"
       MONGO_DB: ${MONGO_DB}
-      MONGO_HOST: ${MONGO_HOST}
+      CSV_DIR: /datasources
+      SESSION_GAP_MINUTES: ${SESSION_GAP_MINUTES}
     depends_on:
       mongodb:
           condition: service_healthy
+    command: ["python", "insert_data_sessions.py"]
 
 

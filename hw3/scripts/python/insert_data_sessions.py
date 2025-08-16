@@ -1,0 +1,86 @@
+import os
+from datetime import timedelta
+import pandas as pd
+from pymongo import MongoClient
+
+# --- config (env with sensible defaults) ---
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/assessment_db")
+MONGO_DB = os.getenv("MONGO_DB", "assessment_db")
+CSV_DIR = os.getenv("CSV_DIR", "/datasources")
+SESSION_GAP_MINUTES = int(os.getenv("SESSION_GAP_MINUTES", "30"))
+
+AD_EVENTS = os.path.join(CSV_DIR, "ad_events.csv")
+
+IMP_COLS = [
+    "EventID","AdvertiserName","CampaignName",
+    "CampaignStartDate","CampaignEndDate",
+    "CampaignTargetingCriteria","CampaignTargetingInterest","CampaignTargetingCountry",
+    "AdSlotSize","UserID","Device","Location","Timestamp",
+    "BidAmount","AdCost","AdRevenue","Budget","RemainingBudget",
+]
+
+ae = pd.read_csv(AD_EVENTS)
+
+for c in ["Timestamp","ClickTimestamp","CampaignStartDate","CampaignEndDate"]:
+    if c in ae.columns:
+        ae[c] = pd.to_datetime(ae[c], errors="coerce", utc=True)
+for c in ["BidAmount","AdCost","AdRevenue","Budget","RemainingBudget"]:
+    if c in ae.columns:
+        ae[c] = pd.to_numeric(ae[c], errors="coerce")
+
+if "UserID" in ae.columns:
+    ae["UserID"] = ae["UserID"].astype(str)
+
+# required cols for sessionization
+for req in ["UserID","Device","Timestamp"]:
+    if req not in ae.columns:
+        raise SystemExit(f"missing required column in ad_events.csv: {req}")
+
+ae = ae.sort_values(["UserID","Device","Timestamp"])
+gap = timedelta(minutes=SESSION_GAP_MINUTES)
+sessions = []
+
+def flush(bucket, user, device):
+    if not bucket:
+        return
+    ts = [x.get("Timestamp") for x in bucket if x.get("Timestamp") is not None]
+    s_start = min(ts) if ts else pd.Timestamp.utcnow().to_pydatetime()
+    s_end   = max(ts) if ts else s_start
+    sessions.append({
+        "UserID": str(user),
+        "Device": str(device),
+        "SessionStart": s_start,
+        "SessionEnd": s_end,
+        "Impressions": bucket
+    })
+
+for (user, device), g in ae.groupby(["UserID","Device"], dropna=False):
+    g = g.reset_index(drop=True)
+    bucket = []
+    last_ts = None
+    for _, r in g.iterrows():
+        ts = r["Timestamp"]
+        if last_ts is not None and pd.notna(ts) and pd.notna(last_ts) and (ts - last_ts) > gap:
+            flush(bucket, user, device); bucket = []
+        # impression: keep only allowed cols; remove NaNs
+        imp = {k: r[k] for k in IMP_COLS if k in r and pd.notna(r[k])}
+        # to native datetimes
+        for dtc in ["Timestamp","CampaignStartDate","CampaignEndDate"]:
+            if dtc in imp:
+                imp[dtc] = pd.to_datetime(imp[dtc], utc=True).to_pydatetime()
+        # clicks nested (only if present)
+        clicks = []
+        wc = r.get("WasClicked", None)
+        ct = r.get("ClickTimestamp", None)
+        if pd.notna(wc) or pd.notna(ct):
+            entry = {}
+            if pd.notna(wc):
+                entry["WasClicked"] = (str(wc).strip().lower() in ("1", "true", "t", "yes", "y")) if isinstance(wc,str) else bool(wc)
+            if pd.notna(ct):
+                entry["ClickTimestamp"] = pd.to_datetime(ct, utc=True).to_pydatetime()
+            clicks.append(entry)
+        if clicks:
+            imp["Clicks"] = clicks
+
+        bucket.append(imp)
+        last_ts = ts if pd.notna(ts) else last_ts
