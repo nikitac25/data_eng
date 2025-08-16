@@ -39,7 +39,7 @@ query = """
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 """
 
-batch_size = 500
+batch_size = 2000
 for start in range(0, len(data), batch_size):
     end = start + batch_size
     batch = data[start:end]
