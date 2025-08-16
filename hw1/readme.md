@@ -4,8 +4,10 @@
 
     ```env
 
-    MYSQL_USER=        # insert_your_username
-    MYSQL_PASSWORD=    # insert_your_password
+    MYSQL_ROOT_PASSWORD=root
+    MYSQL_ROOT_PASSWORD=mystrongpasswort
+    ADMIN_USER=admin
+    ADMIN_PASSWORD=pwd
     MYSQL_DATABASE=assessment_db
     MYSQL_HOST=host.docker.internal
     ```
