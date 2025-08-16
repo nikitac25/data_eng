@@ -13,15 +13,18 @@ cd hw_1_db || exit
 
 docker run -d \
   --name mysql-db \
-  -e MYSQL_ROOT_PASSWORD="$MYSQL_PASSWORD" \
+  -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
   -e MYSQL_DATABASE="$MYSQL_DATABASE" \
   -p 3306:3306 \
   mysql:8.0
 
 sleep 30
 
-docker exec -i mysql-db mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" <<EOF
+docker exec -i mysql-db mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<EOF
 USE $MYSQL_DATABASE;
+
+CREATE USER IF NOT EXISTS '${ADMIN_USER}'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+GRANT SELECT, INSERT, REFERENCES ON \`${MYSQL_DATABASE}\`.* TO '${ADMIN_USER}'@'%';
 
 CREATE TABLE locations (
     id INT PRIMARY KEY AUTO_INCREMENT,

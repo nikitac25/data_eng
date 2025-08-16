@@ -1,14 +1,13 @@
 ## Setup Instructions
 
-1. **Create a `.env` file** in the `hw2` directory with the following variables:
+1. **Create a `.env` file** in the `hw2` directory by the following template:
 
     ```env
 
-    MYSQL_ROOT_PASSWORD=root
-    MYSQL_ROOT_PASSWORD=mystrongpasswort
-    ADMIN_USER=admin
-    ADMIN_PASSWORD=pwd
-    MYSQL_DATABASE=assessment_db
+    MYSQL_ROOT_PASSWORD=
+    ADMIN_USER=
+    ADMIN_PASSWORD=
+    MYSQL_DATABASE=
     MYSQL_HOST=host.docker.internal
     ```
 
