@@ -50,16 +50,13 @@ db.createCollection("sessions", {
                   properties: {
                     WasClicked: { bsonType: "bool" },
                     ClickTimestamp: { bsonType: "date" }
-                  },
-                  additionalProperties: false
+                  }
                 }
               }
-            },
-            additionalProperties: false
+            }
           }
         }
-      },
-      additionalProperties: false
+      }
     }
   }
 });

@@ -56,16 +56,13 @@ db.createCollection("user_stats", {
                   properties: {
                     WasClicked: { bsonType: "bool" },
                     ClickTimestamp: { bsonType: "date" }
-                  },
-                  additionalProperties: false
+                  }
                 }
               }
-            },
-            additionalProperties: false
+            }
           }
         }
-      },
-      additionalProperties: false
+      }
     }
   }
 });
