@@ -4,10 +4,10 @@
 
     ```env
 
-    MYSQL_ROOT_PASSWORD=
-    ADMIN_USER=
-    ADMIN_PASSWORD=
-    MYSQL_DATABASE=
+    MYSQL_ROOT_PASSWORD= #insert_root_password
+    ADMIN_USER= #insert_user_name
+    ADMIN_PASSWORD= #insert_password
+    MYSQL_DATABASE= #insert_database_name
     MYSQL_HOST=host.docker.internal
     ```
 
