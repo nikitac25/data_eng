@@ -18,5 +18,17 @@ services:
 #      retries: 10
 #      start_period: 60s
 
+
+  data_uploader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      CASSANDRA_HOST: cassandra
+    volumes:
+      - ./datasources:/data
 volumes:
   cassandra_logs:
