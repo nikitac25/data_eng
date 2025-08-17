@@ -35,3 +35,6 @@ services:
       MYSQL_HOST: mysql
     volumes:
       - ./datasources:/data
+
+volumes:
+  mysql_logs:
