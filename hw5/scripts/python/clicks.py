@@ -7,11 +7,11 @@ from config import DB_CONFIG
 df = pd.read_csv(sys.argv[1])
 df = df[df['WasClicked'] == 1]
 
-df['Campaign_id'] = df['Campaign_id'].str.extract(r'_(\d+)').astype(int)
+df['campaign_id'] = df['CampaignName'].str.extract(r'_(\d+)').astype(int)
 df['click_timestamp'] = pd.to_datetime(df['Timestamp'])
 
 
-click_data = df[['UserID', 'Campaign_id', 'click_timestamp']].values.tolist()
+click_data = df[['UserID', 'campaign_id', 'click_timestamp']].values.tolist()
 
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor()
