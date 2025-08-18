@@ -13,11 +13,10 @@ DB_PASSWORD = os.getenv("ADMIN_PASSWORD")
 DB_HOST = os.getenv("MYSQL_HOST")
 DB_PORT = int(os.getenv("MYSQL_PORT"))
 
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_DB   = int(os.getenv("REDIS_DB", "0"))
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = int(os.getenv("REDIS_PORT"))
+REDIS_DB   = int(os.getenv("REDIS_DB"))
 
-# Single shared Redis client
 _redis = redis.Redis(
     host=REDIS_HOST,
     port=REDIS_PORT,
@@ -33,14 +32,12 @@ def _cache_get(key: str):
         v = _redis.get(key)
         return None if v is None else json.loads(v)
     except Exception:
-        # Fail open if Redis is unavailable
         return None
 
 def _cache_set(key: str, value, ttl_seconds: int):
     try:
         _redis.set(key, json.dumps(value), ex=ttl_seconds)
     except Exception:
-        # Fail open if Redis is unavailable
         pass
 
 missing = [k for k, v in {
@@ -82,7 +79,6 @@ def campaign_performance(
     start_dt = parse_date(start)
     end_dt = parse_date(end)
 
-    # Read-through cache (30s)
     _ckey = f"campaign:{campaign_id}:performance:{start_dt.isoformat() if start_dt else 'None'}:{end_dt.isoformat() if end_dt else 'None'}"
     _cached = _cache_get(_ckey)
     if _cached is not None:
@@ -152,7 +148,6 @@ def advertiser_spending(
     start_dt = parse_date(start)
     end_dt = parse_date(end)
 
-    # Read-through cache (5 minutes)
     _ckey = f"advertiser:{advertiser_id}:spending:{start_dt.isoformat() if start_dt else 'None'}:{end_dt.isoformat() if end_dt else 'None'}"
     _cached = _cache_get(_ckey)
     if _cached is not None:
@@ -207,10 +202,7 @@ def user_engagements(
     start: Optional[str] = Query(None, description="Start datetime (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"),
     end: Optional[str] = Query(None, description="End datetime (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)")
 ) -> Dict[str, Any]:
-    """
-    Returns ads a user engaged with (rows in clicks) along with campaign and advertiser info.
-    Optional date range filters apply to clicks.click_timestamp.
-    """
+
     start_dt = parse_date(start)
     end_dt = parse_date(end)
 

@@ -6,3 +6,4 @@ uvicorn
 sqlalchemy
 pymysql
 python-dotenv
+redis>=5.0.0
