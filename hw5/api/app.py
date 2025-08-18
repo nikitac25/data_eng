@@ -4,12 +4,44 @@ from datetime import datetime
 import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+import json
+import redis
 
 DB_NAME = os.getenv("MYSQL_DATABASE")
 DB_USER = os.getenv("ADMIN_USER")
 DB_PASSWORD = os.getenv("ADMIN_PASSWORD")
 DB_HOST = os.getenv("MYSQL_HOST")
 DB_PORT = int(os.getenv("MYSQL_PORT"))
+
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_DB   = int(os.getenv("REDIS_DB", "0"))
+
+# Single shared Redis client
+_redis = redis.Redis(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=REDIS_DB,
+    decode_responses=True,
+)
+
+TTL_CAMPAIGN_PERF = 30
+TTL_ADVERTISER_SPEND = 300
+
+def _cache_get(key: str):
+    try:
+        v = _redis.get(key)
+        return None if v is None else json.loads(v)
+    except Exception:
+        # Fail open if Redis is unavailable
+        return None
+
+def _cache_set(key: str, value, ttl_seconds: int):
+    try:
+        _redis.set(key, json.dumps(value), ex=ttl_seconds)
+    except Exception:
+        # Fail open if Redis is unavailable
+        pass
 
 missing = [k for k, v in {
     "MYSQL_DATABASE": DB_NAME,
@@ -35,7 +67,10 @@ def parse_date(s: Optional[str]) -> Optional[datetime]:
             return datetime.strptime(s, fmt)
         except ValueError:
             continue
-    raise HTTPException(status_code=400, detail=f"Invalid date format '{s}'. Use 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'.")
+    raise HTTPException(
+        status_code=400,
+        detail=f"Invalid date format '{s}'. Use 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'."
+    )
 
 @app.get("/campaign/{campaign_id}/performance")
 def campaign_performance(
@@ -46,6 +81,12 @@ def campaign_performance(
 
     start_dt = parse_date(start)
     end_dt = parse_date(end)
+
+    # Read-through cache (30s)
+    _ckey = f"campaign:{campaign_id}:performance:{start_dt.isoformat() if start_dt else 'None'}:{end_dt.isoformat() if end_dt else 'None'}"
+    _cached = _cache_get(_ckey)
+    if _cached is not None:
+        return _cached
 
     with engine.begin() as conn:
         camp = conn.execute(text("""
@@ -70,12 +111,21 @@ def campaign_performance(
             clk_where += " AND click_timestamp < :end"
             params["end"] = end_dt
 
-        impressions = conn.execute(text(f"SELECT COUNT(*) FROM impressions WHERE {imp_where}"), params).scalar_one()
-        clicks = conn.execute(text(f"SELECT COUNT(*) FROM clicks WHERE {clk_where}"), params).scalar_one()
-        spend = conn.execute(text(f"SELECT COALESCE(SUM(ad_cost),0) FROM impressions WHERE {imp_where}"), params).scalar_one()
+        impressions = conn.execute(
+            text(f"SELECT COUNT(*) FROM impressions WHERE {imp_where}"), params
+        ).scalar_one()
+
+        clicks = conn.execute(
+            text(f"SELECT COUNT(*) FROM clicks WHERE {clk_where}"), params
+        ).scalar_one()
+
+        spend = conn.execute(
+            text(f"SELECT COALESCE(SUM(ad_cost), 0) FROM impressions WHERE {imp_where}"), params
+        ).scalar_one()
 
     ctr = float(clicks) / float(impressions) if impressions else 0.0
-    return {
+
+    result = {
         "campaign_id": camp["campaign_id"],
         "campaign_name": camp["campaign_name"],
         "advertiser_name": camp["advertiser_name"],
@@ -83,9 +133,14 @@ def campaign_performance(
         "clicks": int(clicks),
         "ctr": ctr,
         "ad_spend": float(spend),
-        "filters": {"start": start_dt.isoformat() if start_dt else None,
-                    "end": end_dt.isoformat() if end_dt else None}
+        "filters": {
+            "start": start_dt.isoformat() if start_dt else None,
+            "end": end_dt.isoformat() if end_dt else None
+        }
     }
+
+    _cache_set(_ckey, result, TTL_CAMPAIGN_PERF)
+    return result
 
 @app.get("/advertiser/{advertiser_id}/spending")
 def advertiser_spending(
@@ -97,8 +152,18 @@ def advertiser_spending(
     start_dt = parse_date(start)
     end_dt = parse_date(end)
 
+    # Read-through cache (5 minutes)
+    _ckey = f"advertiser:{advertiser_id}:spending:{start_dt.isoformat() if start_dt else 'None'}:{end_dt.isoformat() if end_dt else 'None'}"
+    _cached = _cache_get(_ckey)
+    if _cached is not None:
+        return _cached
+
     with engine.begin() as conn:
-        adv = conn.execute(text("SELECT id, name FROM advertisers WHERE id = :aid"), {"aid": advertiser_id}).mappings().first()
+        adv = conn.execute(
+            text("SELECT id, name FROM advertisers WHERE id = :aid"),
+            {"aid": advertiser_id}
+        ).mappings().first()
+
         if not adv:
             raise HTTPException(status_code=404, detail=f"Advertiser {advertiser_id} not found.")
 
@@ -122,14 +187,19 @@ def advertiser_spending(
             SELECT COUNT(DISTINCT campaign_id) FROM campaigns WHERE advertiser_id = :aid
         """), {"aid": advertiser_id}).scalar_one()
 
-    return {
+    result = {
         "advertiser_id": int(adv["id"]),
         "advertiser_name": adv["name"],
         "campaign_count": int(campaign_count or 0),
         "total_ad_spend": float(spend),
-        "filters": {"start": start_dt.isoformat() if start_dt else None,
-                    "end": end_dt.isoformat() if end_dt else None}
+        "filters": {
+            "start": start_dt.isoformat() if start_dt else None,
+            "end": end_dt.isoformat() if end_dt else None
+        }
     }
+
+    _cache_set(_ckey, result, TTL_ADVERTISER_SPEND)
+    return result
 
 @app.get("/user/{user_id}/engagements")
 def user_engagements(
@@ -145,7 +215,9 @@ def user_engagements(
     end_dt = parse_date(end)
 
     with engine.begin() as conn:
-        user_exists = conn.execute(text("SELECT 1 FROM users WHERE user_id = :uid"), {"uid": user_id}).first()
+        user_exists = conn.execute(
+            text("SELECT 1 FROM users WHERE user_id = :uid"), {"uid": user_id}
+        ).first()
         if not user_exists:
             raise HTTPException(status_code=404, detail=f"User {user_id} not found.")
 
@@ -179,6 +251,8 @@ def user_engagements(
         "user_id": int(user_id),
         "engagement_count": len(engagements),
         "engagements": engagements,
-        "filters": {"start": start_dt.isoformat() if start_dt else None,
-                    "end": end_dt.isoformat() if end_dt else None}
+        "filters": {
+            "start": start_dt.isoformat() if start_dt else None,
+            "end": end_dt.isoformat() if end_dt else None
+        }
     }
