@@ -45,7 +45,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      data-uploader:
+      data_uploader:
         condition: service_completed_successfully
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
